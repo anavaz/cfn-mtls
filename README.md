@@ -15,7 +15,8 @@ This template creates Root CA and SubOrdinate CA and also install Root and SubCA
 
 Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authentication : 
 
-[![Launch AWS CloudFormation stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=LaunchALBWithMTLS&templateURL=https%3A%2F%2Fraw.githubusercontent.com%2Fanavaz%2Fcfn-mtls%2Fmain%2Falb-with-mtls.yaml)
+[![Launch AWS CloudFormation stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=LaunchALBWithMTLS&templateURL=https://raw.githubusercontent.com/anavaz/cfn-mtls/main/alb-with-mtls.yaml)
+
 
 Launch CFN [template](https://github.com/anavaz/cfn-mtls/blob/main/issue-certificate-using-aws-private-ca.yaml). This template will launch ALB with 2 listeners :
     HTTP Listener on Port 80: Redirect All Traffic to HTTPS
