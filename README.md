@@ -4,9 +4,9 @@ This Repository Contain AWS Cloud-formation template To Launch ALB with mTLS lis
 Steps to Launch Cloudformation Template :
 =========================================
 
-Step1 : Create Certificate authority using AWS CA: Launch template using aws-ca.yaml . This template creates Root CA and SubOrdinate CA and also install Root and SubCA Certificates. Validity of Root CA is set to 10 years and Validity of Subordinate CA is set to 9 Years.  You can create a RootCAbundle.pem file by simply coping the subordinate CA cert and Root CA and upload it to Amazon S3. 
+**Step1 : Create Certificate authority using AWS CA:** Launch template using aws-ca.yaml . This template creates Root CA and SubOrdinate CA and also install Root and SubCA Certificates. Validity of Root CA is set to 10 years and Validity of Subordinate CA is set to 9 Years.  You can create a RootCAbundle.pem file by simply coping the subordinate CA cert and Root CA and upload it to Amazon S3. 
 
-Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authentication : Launch CFN template using  alb-mtls.yaml. This template will launch ALB with 2 listeners :
+**Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authentication :** Launch CFN template using  alb-mtls.yaml. This template will launch ALB with 2 listeners :
     HTTP Listener on Port 80: Redirect All Traffic to HTTPS
     HTTPS Listsner on Port 443: Forward the Traffic to Lambda Function
 
@@ -18,11 +18,27 @@ Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authenticati
  Steps to test mTLS :
  ==================
 
-Step1 : Create Certificate Signing Request (CSR) 
+Step1 : Create Certificate Signing Request (CSR)** 
+```
 openssl req -out client-csr.pem -new -newkey rsa:2048 -nodes -keyout client-key.pem
+```
+Step2 : Issue a Certificate using the Private CA that you have created. This should return the ARN of Issued certficate .
+```
+aws acm-pca issue-certificate \
+      --certificate-authority-arn <arn-of-subordinate-ca \
+      --csr fileb://client_csr.pem \
+      --signing-algorithm "SHA256WITHRSA" \
+      --validity Value=30,Type="DAYS" 
+```
+Step3: You can Get the issued the certificate and Download it to your local machine.
+```
+aws acm-pca get-certificate \
+      --certificate-authority-arn <arn-of-subordinate-ca \
+      --certificate-arn <arn-of-isssued-cert | \
+      jq -r .'Certificate' > client_cert.cert
+ ```
 
-Step2 : 
-
- 
-
-
+Step 4: Test the mTLS using cURL.
+```
+curl -ivk --cert client_cert.cert --key client-key.pem https://<elb-name>
+```
