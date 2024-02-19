@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template for ALB with mTLS Listener and Display mTLS speficic Headers as a Response.
+
+Resources:
+  MyLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: logs:*
+                Resource: arn:aws:logs:*:*:*
+
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt MyLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+
+          def lambda_handler(event, context):
+              # Extract the HTTP headers from the event
+              http_headers = event.get('headers', {})
+              
+              # descriptive message about the received HTTP headers
+              headers_description = "The HTTP Headers Received from the ALB are: "
+              headers_list = "\\n".join(f"{header}: {value}" for header, value in http_headers.items())
+              
+              full_message = "Hello ! After Successful mTLS Authentication on Application Load Balancer\\n\\n" + headers_description + "\\n" + headers_list
+              
+              response = {
+                  'statusCode': 200,
+                  'statusDescription': '200 OK',
+                  'isBase64Encoded': False,
+                  'headers': {
+                      'Content-Type': 'text/plain'
+                  },
+                  'body': full_message
+              }
+              
+              return response
+      Runtime: python3.8
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all inbound traffic for ALB
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  MyLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+        - !Ref MySecurityGroup
+      Subnets:
+        - !Ref SubnetA
+        - !Ref SubnetB
+      Type: application
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref LambdaTargetGroup
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      LoadBalancerArn: !Ref MyLoadBalancer
+      MutualAuthentication:
+          IgnoreClientCertificateExpiry: false
+          Mode: verify
+          TrustStoreArn: !Ref TrustStore
+      Port: 443
+      Protocol: HTTPS
+   
+
+  TrustStore:
+    Type: AWS::ElasticLoadBalancingV2::TrustStore
+    Properties:
+          CaCertificatesBundleS3Bucket: !Ref S3Bucket
+          CaCertificatesBundleS3Key: !Ref S3Key
+          Name: mymtls-ts
+
+  LambdaTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: lambda
+      Targets:
+        - Id: !GetAtt MyLambdaFunction.Arn
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MyLambdaFunction.Arn
+      Principal: elasticloadbalancing.amazonaws.com
+      
+
+Parameters:
+  VPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC Id where the ALB will be deployed.
+  SubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet A for the ALB.
+  SubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet B for the ALB.
+  CertificateArn:
+    Type: String
+    Description: The ARN of the SSL certificate from ACM for HTTPS listener.
+  S3Bucket:
+    Type: String
+    Description : S3 Bucket where Certificate bundle is present.
+  S3Key:
+    Type: String
+    Description : The Path for certficate bundle         
+
+Outputs:
+  LambdaFunctionName:
+    Description: The Lambda function name.
+    Value: !Ref MyLambdaFunction
+  LoadBalancerDNSName:
+    Description: The DNS name of the Load Balancer.
+    Value: !GetAtt MyLoadBalancer.DNSName
