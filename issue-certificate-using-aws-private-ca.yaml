@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cloudformation template to setup CA.
+Resources:
+  RootCA:
+    Type: AWS::ACMPCA::CertificateAuthority
+    Properties:
+      Type: ROOT
+      KeyAlgorithm: RSA_2048
+      SigningAlgorithm: SHA256WITHRSA
+      Subject:
+        Country: US
+        Organization: myorg
+        OrganizationalUnit: myorgunit
+        DistinguishedNameQualifier: qualifier
+        State: mystate
+        CommonName: 'mycommonname'
+      RevocationConfiguration:
+        CrlConfiguration:
+          Enabled: false
+  RootCACertificate:
+    Type: AWS::ACMPCA::Certificate
+    Properties:
+      CertificateAuthorityArn:
+        Ref: RootCA
+      CertificateSigningRequest:
+        Fn::GetAtt:
+        - RootCA
+        - CertificateSigningRequest
+      SigningAlgorithm: SHA256WITHRSA
+      TemplateArn: arn:aws:acm-pca:::template/RootCACertificate/V1
+      Validity:
+        Type: YEARS
+        Value: 10
+  RootCAActivation:
+    Type: AWS::ACMPCA::CertificateAuthorityActivation
+    Properties:
+      CertificateAuthorityArn:
+        Ref: RootCA
+      Certificate:
+        Fn::GetAtt:
+        - RootCACertificate
+        - Certificate
+      Status: ACTIVE
+  RootCAPermission:
+    Type: AWS::ACMPCA::Permission
+    Properties:
+      Actions:
+        - IssueCertificate
+        - GetCertificate
+        - ListPermissions
+      CertificateAuthorityArn: !Ref RootCA
+      Principal: acm.amazonaws.com
+  SubordinateCAOne:
+    Type: AWS::ACMPCA::CertificateAuthority
+    Properties:
+      Type: SUBORDINATE
+      KeyAlgorithm: RSA_2048
+      SigningAlgorithm: SHA256WITHRSA
+      Subject:
+        Country: US
+        Organization: myorg
+        OrganizationalUnit: myorgunit
+        State: mystate
+        CommonName: mycommonname
+      RevocationConfiguration: {}
+      Tags: []
+  SubordinateCAOneCACertificate:
+    DependsOn: RootCAActivation
+    Type: AWS::ACMPCA::Certificate
+    Properties:
+      CertificateAuthorityArn:
+        Ref: RootCA
+      CertificateSigningRequest:
+        Fn::GetAtt:
+        - SubordinateCAOne
+        - CertificateSigningRequest
+      SigningAlgorithm: SHA256WITHRSA
+      TemplateArn: arn:aws:acm-pca:::template/SubordinateCACertificate_PathLen0/V1
+      Validity:
+        Type: YEARS
+        Value: 9
+  SubordinateCAOneActivation:
+    Type: AWS::ACMPCA::CertificateAuthorityActivation
+    Properties:
+      CertificateAuthorityArn:
+        Ref: SubordinateCAOne
+      Certificate:
+        Fn::GetAtt:
+        - SubordinateCAOneCACertificate
+        - Certificate
+      CertificateChain:
+        Fn::GetAtt:
+        - RootCAActivation
+        - CompleteCertificateChain
+      Status: ACTIVE
+  SubordinateCAOnePermission:
+    Type: AWS::ACMPCA::Permission
+    Properties:
+      Actions:
+        - IssueCertificate
+        - GetCertificate
+        - ListPermissions
+      CertificateAuthorityArn: !Ref SubordinateCAOne
+      Principal: acm.amazonaws.com
+
+Outputs:
+  CompleteCertificateChain:
+    Value:
+      Fn::GetAtt:
+      - SubordinateCAOneActivation
+      - CompleteCertificateChain
+  CertificateArn:
+    Value:
+      Fn::GetAtt:
+      - SubordinateCAOneCACertificate
+      - Arn
