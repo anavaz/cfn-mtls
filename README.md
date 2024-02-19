@@ -4,7 +4,7 @@ This Repository Contain AWS Cloud-formation template To Launch ALB with mTLS lis
 Steps to Launch Cloudformation Template :
 =========================================
 
-**Step1 : Create Certificate authority using AWS CA:** Launch template using aws-ca.yaml . This template creates Root CA and SubOrdinate CA and also install Root and SubCA Certificates. Validity of Root CA is set to 10 years and Validity of Subordinate CA is set to 9 Years.  You can create a RootCAbundle.pem file by simply coping the subordinate CA cert and Root CA and upload it to Amazon S3. 
+**Step1 : Create Certificate authority using AWS CA:** Launch [template](https://github.com/anavaz/cfn-mtls/blob/main/issue-certificate-using-aws-private-ca.yaml) to Create Private CA . This template creates Root CA and SubOrdinate CA and also install Root and SubCA Certificates. Validity of Root CA is set to 10 years and Validity of Subordinate CA is set to 9 Years.  You can create a RootCAbundle.pem file by simply coping the subordinate CA cert and Root CA and upload it to Amazon S3. 
 
 **Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authentication :** Launch CFN template using  alb-mtls.yaml. This template will launch ALB with 2 listeners :
     HTTP Listener on Port 80: Redirect All Traffic to HTTPS
