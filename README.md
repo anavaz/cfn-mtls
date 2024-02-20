@@ -1,22 +1,21 @@
 # cfn-mtls
-This Repository Contain AWS Cloud-formation template To Launch ALB with mTLS listener.
+This Repository Contain AWS Cloud-formation template To Launch ALB with mTLS listener. It does the following :
+
+1. Create Certficate Authority using AWS Private CA
+2. Create EC2 Trust Store
+3. Create Application Load balancer with mTLS configuration.
+4. A Lambda Function which Responds with HTTP Headers Added by ALB
 
 Steps to Launch Cloudformation Template :
 =========================================
 
 Step1 : Create Certificate authority using AWS CA: 
 
-[![Launch AWS CloudFormation stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=MyStack&templateURL=https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=Issue-Certficate-using-private-ca&templateURL=https://raw.githubusercontent.com/anavaz/cfn-mtls/main/issue-certificate-using-aws-private-ca.yaml
-) . 
-
 This template creates Root CA and SubOrdinate CA and also install Root and SubCA Certificates. Validity of Root CA is set to 10 years and Validity of Subordinate CA is set to 9 Years.  You can create a RootCAbundle.pem file by simply coping the subordinate CA cert and Root CA and upload it to Amazon S3. 
 
 
 
 Step 2 : Create Trust Store and Launch ALB and Configure Mutual TLS Authentication : 
-
-[![Launch AWS CloudFormation stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=LaunchALBWithMTLS&templateURL=https://raw.githubusercontent.com/anavaz/cfn-mtls/main/alb-with-mtls.yaml)
-
 
 Launch CFN [template](https://github.com/anavaz/cfn-mtls/blob/main/issue-certificate-using-aws-private-ca.yaml). This template will launch ALB with 2 listeners :
     HTTP Listener on Port 80: Redirect All Traffic to HTTPS
