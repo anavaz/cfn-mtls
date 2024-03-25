@@ -13,7 +13,7 @@ Resources:
         OrganizationalUnit: myorgunit
         DistinguishedNameQualifier: qualifier
         State: mystate
-        CommonName: 'mycommonname'
+        CommonName: 'exampleloadbalancer.com'
       RevocationConfiguration:
         CrlConfiguration:
           Enabled: false
